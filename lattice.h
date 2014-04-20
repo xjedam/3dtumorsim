@@ -8,7 +8,7 @@
 #define TUMOR_NECROSIS            3
 #define TUMOR_STEM                4
 #define TYPE5                     5
-#define SET_TYPE(c, t)            ((c & 0xFFFFFFFF0FFFFFFF) | (t << 28))     
+#define SET_TYPE(c, t)            ((c & 0xFFFFFFFF0FFFFFFF) | (t << 28))   
 
 int64_t ***initLattice();
-void drawLatticeSite(int x, int y, int z, int64_t value);
+void drawLatticeSite(int x, int y, int z, int64_t value, float xrot, float yrot);

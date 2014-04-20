@@ -1,30 +1,44 @@
 #include "3dtumorsim.h"
 #include "lattice.h"
 #include <time.h>
+#include <stdio.h>
 
 int64_t ***lattice, ***buff;
+float xrot = 0.0, yrot = 0.0;
+int xClick, yClick, width, height;
+int lmbDown = 0;
 int isPause = 0;
 clock_t start, stop;
+
+void initGL() {
+   glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Set background color to black and opaque
+   glClearDepth(1.0f);                   // Set background depth to farthest
+   glEnable(GL_DEPTH_TEST);   // Enable depth testing for z-culling
+   glDepthFunc(GL_LEQUAL);    // Set the type of depth-test
+   glShadeModel(GL_SMOOTH);   // Enable smooth shading
+   glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);  // Nice perspective corrections
+}
 
 // Clears the current window and draws a triangle.
 void display() {
   int i, j, k;
+  printf("rot: %f, %f\n", xrot, yrot);
   if(!isPause) {
     stop = clock();
     if(((float)(stop - start))/CLOCKS_PER_SEC < ITER_DELAY && !isPause){
-      //printf("%f\n", ITER_DELAY - (((float)(stop - start))/CLOCKS_PER_SEC));
       SLEEP_FUNC((ITER_DELAY - (((float)(stop - start))/CLOCKS_PER_SEC))*SLEEP_MULTIPLIER);
     }
     start = clock();
     // Set every pixel in the frame buffer to the current clear color.
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClearDepth(1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);             // To operate on model-view matrix
     
     for(i = 0; i < MODEL_SIZE_X; i++) {
       for(j = 0; j < MODEL_SIZE_Y; j++) {
         for(k = 0; k < MODEL_SIZE_Z; k++) {
           if(lattice[i][j][k] != 0) {
-            drawLatticeSite(i, j, k, lattice[i][j][k]);
+            drawLatticeSite(i, j, k, lattice[i][j][k], xrot, yrot);
           }
         }
       }
@@ -57,6 +71,26 @@ void processNormalKeys(unsigned char key, int x, int y) {
   }
 }
 
+void mousePressCallback(int button, int state, int x, int y) {
+  if(button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+    lmbDown = 1;
+    xClick = x;
+    yClick = y;
+  } else if(button == GLUT_LEFT_BUTTON && state == GLUT_UP) {
+    lmbDown = 0;
+  }
+}
+
+void mouseActiveMoveCallback(int x, int y) {
+  if(lmbDown) {
+    xrot += xClick - x;
+    yrot += yClick - y;
+    xClick = x;
+    yClick = y;
+    onReshape(width, height);
+  }
+}
+
 void processSpecialKeys(int key, int x, int y) {
 
 	// switch(key) {
@@ -75,6 +109,20 @@ void processSpecialKeys(int key, int x, int y) {
 	// }
 }
 
+void onReshape(int w, int h) {
+  width = w;
+  height = h;
+  float ratio =  ((float) w) / ((float) h); // window aspect ratio
+	glMatrixMode(GL_PROJECTION); // projection matrix is active
+	glLoadIdentity(); // reset the projection
+  glRotatef(yrot, 1.0f, 0.0f, 0.0f);
+  glRotatef(xrot, 0.0f, 1.0f, 0.0f);
+  glFrustum(-0.5, 0.5, -0.5, 0.5, -0.5, 0.5);
+	// gluPerspective(45.0, ratio, 0.1, 100.0); // perspective transformation
+	glMatrixMode(GL_MODELVIEW); // return to modelview mode
+  glViewport(SITE_SIZE/2, SITE_SIZE/2, w, h);
+}
+
 // Initializes GLUT, the display mode, and main window; registers callbacks;
 // enters the main event loop.
 int main(int argc, char** argv) {
@@ -84,7 +132,7 @@ int main(int argc, char** argv) {
   // Use a single buffered window in RGB mode (as opposed to a double-buffered
   // window or color-index mode).
   glutInit(&argc, argv);
-  glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
+  glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
   start = clock();
   
   // Position window at (80,80)-(480,380) and give it a title.
@@ -95,18 +143,24 @@ int main(int argc, char** argv) {
   // Enable alpha blending
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glEnable( GL_BLEND );
+  
+  initGL();
+  
   // Tell GLUT that whenever the main window needs to be repainted that it
   // should call the function display().
   glutDisplayFunc(display);
   glutIdleFunc(display);
-  // glutReshapeFunc(reshape);       // Register callback handler for window re-size event
+  glutReshapeFunc(onReshape);       // Register callback handler for window re-size event
+  glutMotionFunc(mouseActiveMoveCallback);
+  glutMouseFunc(mousePressCallback);
   
   glutKeyboardFunc(processNormalKeys);
 	glutSpecialFunc(processSpecialKeys);
   
   int i = 0;
   for(i = 0; i < MODEL_SIZE_X; i++) {
-    lattice[i][i][i] = SET_TYPE(0, 1);
+    lattice[i][i][i] = SET_TYPE(1, (VASCULAR + i) % 2 + 1 );
+    printf("placing at [%i, %i, %i] %i\n", i, i, i, (VASCULAR + i) % 2 + 1);
   }
 
   // Tell GLUT to start reading and processing events.  This function
