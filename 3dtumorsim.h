@@ -1,5 +1,6 @@
 #include <inttypes.h>
 #include <GL/glut.h>
+#include <stdio.h>
 
 #define WINDOW_NAME       "3d tumor simulator"
 #define MODEL_SIZE_X      20
@@ -17,7 +18,7 @@
 #else
 	#include <unistd.h>
   #define SLEEP_FUNC usleep
-#define SLEEP_MULTIPLIER 1000000
+	#define SLEEP_MULTIPLIER 1000000
 #endif
   
 void processNormalKeys(unsigned char key, int x, int y);

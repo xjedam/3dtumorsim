@@ -1,13 +1,15 @@
 #include "3dtumorsim.h"
 #include "lattice.h"
+#include "potts.h"
 #include <time.h>
-#include <stdio.h>
 
 int64_t ***lattice, ***buff;
+cell_info_t *cells;
 float xrot = 0.0, yrot = 0.0;
 int xClick, yClick, width, height;
 int lmbDown = 0;
 int isPause = 0;
+int numCells = 0;
 clock_t start, stop;
 
 void initGL() {
@@ -129,6 +131,7 @@ int main(int argc, char** argv) {
 
   lattice = initLattice();
   buff = initLattice();
+  cells = initCells();
   // Use a single buffered window in RGB mode (as opposed to a double-buffered
   // window or color-index mode).
   glutInit(&argc, argv);
@@ -157,11 +160,15 @@ int main(int argc, char** argv) {
   glutKeyboardFunc(processNormalKeys);
 	glutSpecialFunc(processSpecialKeys);
   
-  int i = 0;
-  for(i = 0; i < MODEL_SIZE_X; i++) {
-    lattice[i][i][i] = SET_TYPE(1, (VASCULAR + i) % 2 + 1 );
-    printf("placing at [%i, %i, %i] %i\n", i, i, i, (VASCULAR + i) % 2 + 1);
+  if(argc > 1) {
+    FILE *fp = fopen(argv[1], "r");
+    numCells = loadModel(fp, lattice, cells);
   }
+  // int i = 0;
+  // for(i = 0; i < MODEL_SIZE_X; i++) {
+  //   lattice[i][i][i] = SET_TYPE(1, (VASCULAR + i) % 2 + 1 );
+  //   printf("placing at [%i, %i, %i] %i\n", i, i, i, (VASCULAR + i) % 2 + 1);
+  // }
 
   // Tell GLUT to start reading and processing events.  This function
   // never returns; the program only exits when the user closes the main

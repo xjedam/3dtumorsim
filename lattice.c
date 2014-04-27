@@ -50,6 +50,7 @@ void drawLatticeSite(int x, int y, int z, int64_t value, float xrot, float yrot)
         glColor4f(1.0f, 1.0f, 1.0f, 0.4f);
     }
 
+    // Top face
     glVertex3f( viewScaleX, viewScaleY, -viewScaleZ);
     glVertex3f(-viewScaleX, viewScaleY, -viewScaleZ);
     glVertex3f(-viewScaleX, viewScaleY,  viewScaleZ);
