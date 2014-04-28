@@ -1,7 +1,6 @@
 #include "3dtumorsim.h"
 #include "lattice.h"
 #include "potts.h"
-#include <time.h>
 
 int64_t ***lattice, ***buff;
 cell_info_t *cells;
@@ -86,7 +85,7 @@ void mousePressCallback(int button, int state, int x, int y) {
 void mouseActiveMoveCallback(int x, int y) {
   if(lmbDown) {
     xrot += xClick - x;
-    yrot += yClick - y;
+    yrot += yClick - y;  
     xClick = x;
     yClick = y;
     onReshape(width, height);
@@ -129,6 +128,7 @@ void onReshape(int w, int h) {
 // enters the main event loop.
 int main(int argc, char** argv) {
 
+  srand(time(NULL));
   lattice = initLattice();
   buff = initLattice();
   cells = initCells();

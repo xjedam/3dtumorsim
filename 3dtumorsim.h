@@ -1,6 +1,7 @@
 #include <inttypes.h>
 #include <GL/glut.h>
 #include <stdio.h>
+#include <time.h>
 
 #define WINDOW_NAME       "3d tumor simulator"
 #define MODEL_SIZE_X      20

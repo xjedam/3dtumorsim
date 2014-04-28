@@ -1,3 +1,6 @@
+#define	MEMBRANE_RESISTANCE 20
+#define VOLUME_RESISTANCE 20
+
 typedef struct POTTS_T {
   int membraneArea;
   int volume;
@@ -8,4 +11,6 @@ typedef struct POTTS_T {
 cell_info_t *initCells();
 int loadModel(FILE *fp, int64_t ***lattice, cell_info_t *cells);
 void saveModel(FILE *fp, int64_t ***lattice, cell_info_t *cells);
-int getMembraneChange(int x, int y, int z, int64_t ***lattice);
+int getMembraneChangeInsert(int x, int y, int z, int64_t ***lattice, int sigma);
+int getMembraneChangeRemove(int x, int y, int z, int64_t ***lattice, int sigma);
+void calculateNextStep(int64_t ***lattice, int cellCount);
