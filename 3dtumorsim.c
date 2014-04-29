@@ -44,6 +44,8 @@ void display() {
         }
       }
     }
+
+    calculateNextStep(lattice, numCells, cells);
     
     // Drawing is done by specifying a sequence of vertices.  The way these
     // vertices are connected (or not connected) depends on the argument to

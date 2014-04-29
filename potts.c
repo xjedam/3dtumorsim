@@ -15,7 +15,7 @@ int bondEnergy[6][6] = {
 
 // target membrane area definition
 int targetMembrane[6] = {
-  0,                            // MEDIUM
+  30,                           // MEDIUM
   40,                           // VASCULAR
   30,                           // TUMOR_NORM
   30,                           // TUMOR_NECROSIS
@@ -25,7 +25,7 @@ int targetMembrane[6] = {
 
 // target volume definition
 int targetVolume[6] = {
-  0,                            // MEDIUM
+  15,                           // MEDIUM
   24,                           // VASCULAR
   15,                           // TUMOR_NORM
   15,                           // TUMOR_NECROSIS
@@ -41,8 +41,8 @@ cell_info_t *initCells() {
 	for(i = 0; i < size; i++) {
 		cells[i].temperature = 36.7;
 		cells[i].type = 0;
-		cells[i].volume = 0;
-		cells[i].membraneArea = 0;
+		cells[i].volume = 30;
+		cells[i].membraneArea = 30;
 	}
 	return cells;
 }
@@ -142,24 +142,71 @@ int getMembraneChangeRemove(int x, int y, int z, int64_t ***lattice, int sigma) 
   return change;
 }
 
-void calculateNextStep(int64_t ***lattice, int cellCount) {
-  int i, x, y, z, xStart, yStart, zStart;
+void calculateNextStep(int64_t ***lattice, int cellCount, cell_info_t *cells) {
+  int i, j, x, y, z, xModiff, yModiff, zModiff;
   for(i = 0; i < cellCount; i++) {
+    // reset medium
+    cells[0].volume = targetVolume[0];
+    cells[0].membraneArea = targetMembrane[0];
+
     x = rand() % MODEL_SIZE_X;
     y = rand() % MODEL_SIZE_Y;
     z = rand() % MODEL_SIZE_Z;
-    if(TYPE(lattice[x][y][z]) != MEDIUM) {
-      xStart = (rand() % 2) * 2 - 1;
-      yStart = (rand() % 2) * 2 - 1;
-      zStart = (rand() % 2) * 2 - 1;
 
-      if(x + xStart >= 0 && x + xStart < MODEL_SIZE_X &&
-          y + yStart >= 0 && y + yStart < MODEL_SIZE_Y &&
-          z + zStart >= 0 && z + zStart < MODEL_SIZE_Z) {
-        // TODO
-      }
-    } else {
-      i--;
-    }
+    xModiff = (rand() % 2) * 2 - 1;
+    yModiff = (rand() % 2) * 2 - 1;
+    zModiff = (rand() % 2) * 2 - 1;
+
+    if(checkAndMoveToSite(x, y, z, x + xModiff, y, z, lattice, cells)){ continue; }
+    if(checkAndMoveToSite(x, y, z, x - xModiff, y, z, lattice, cells)){ continue; }
+    if(checkAndMoveToSite(x, y, z, x, y + yModiff, z, lattice, cells)){ continue; }
+    if(checkAndMoveToSite(x, y, z, x, y - yModiff, z, lattice, cells)){ continue; }
+    if(checkAndMoveToSite(x, y, z, x, y, z + zModiff, lattice, cells)){ continue; }
+    if(checkAndMoveToSite(x, y, z, x, y, z - zModiff, lattice, cells)){ continue; }
+
+    i--;
   }
+}
+
+// checks whether cell should expand to target lattie and performs the expansion if it should
+// returns 1 if expansion has been performed, and 0 otherwise
+int checkAndMoveToSite(int x1, int y1, int z1, int x2, int y2, int z2, int64_t ***lattice, cell_info_t *cells) {
+  long long newEnergy = globalEnergy;
+
+  if(x2 >= 0 && x2 < MODEL_SIZE_X && y2 >= 0 && y2 < MODEL_SIZE_Y && z2 >= 0 && z2 < MODEL_SIZE_Z &&
+      SIGMA(lattice[x2][y2][z2]) != SIGMA(lattice[x1][y1][z1])) {
+    int sigmaTarget = SIGMA(lattice[x2][y2][z2]);
+    int sigmaSource = SIGMA(lattice[x1][y1][z1]);
+
+    int membranePartTarget = pow(cells[sigmaTarget].membraneArea - targetMembrane[cells[sigmaTarget].type], 2);
+    int membranePartSource = pow(cells[sigmaSource].membraneArea - targetMembrane[cells[sigmaSource].type], 2);
+    int membranePart =  membranePartSource + membranePartTarget;
+    int volumePartTarget = pow(cells[sigmaTarget].volume - targetVolume[cells[sigmaTarget].type], 2);
+    int volumePartSource = pow(cells[sigmaSource].volume - targetVolume[cells[sigmaSource].type], 2);
+    int volumePart = volumePartTarget + volumePartSource;
+
+    int oldEnergyValues = MEMBRANE_RESISTANCE * membranePart + VOLUME_RESISTANCE * volumePart;
+
+    // subtracts old cell membrane and volume values
+    newEnergy -= oldEnergyValues;
+    // add energy of new source cell and target cell membrane state
+    newEnergy += (getMembraneChangeInsert(x2, y2, z2, lattice, sigmaSource) + membranePartSource) * MEMBRANE_RESISTANCE;
+    newEnergy += (getMembraneChangeRemove(x2, y2, z2, lattice, sigmaSource) + membranePartTarget) * MEMBRANE_RESISTANCE;
+    // add energy of new source cell and target cell volume state
+    newEnergy += (volumePartSource + 1) * VOLUME_RESISTANCE;
+    newEnergy += (volumePartTarget - 1) * VOLUME_RESISTANCE;
+
+    int deltaEnergy = globalEnergy - newEnergy;
+    if(deltaEnergy < ENERGY_TRESHOLD || ((float)rand()) / ((float)RAND_MAX) < exp(-(deltaEnergy + ENERGY_TRESHOLD) / TEMPERATURE)) {
+      globalEnergy = newEnergy;
+      cells[sigmaSource].volume++;
+      cells[sigmaTarget].volume--;
+      cells[sigmaSource].membraneArea += getMembraneChangeInsert(x2, y2, z2, lattice, sigmaSource);
+      cells[sigmaTarget].membraneArea -= getMembraneChangeRemove(x2, y2, z2, lattice, sigmaSource);
+      lattice[x2][y2][z2] = lattice[x1][y1][z1];
+      return 1;
+    }
+
+  }
+  return 0;
 }
