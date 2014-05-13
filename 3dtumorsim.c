@@ -39,7 +39,7 @@ void display() {
       for(j = 0; j < MODEL_SIZE_Y; j++) {
         for(k = 0; k < MODEL_SIZE_Z; k++) {
           if(lattice[i][j][k] != 0) {
-            drawLatticeSite(i, j, k, lattice[i][j][k], xrot, yrot);
+            drawLatticeSite(i, j, k, lattice[i][j][k], xrot, yrot, lattice);
           }
         }
       }

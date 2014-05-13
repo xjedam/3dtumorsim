@@ -11,4 +11,4 @@
 #define SET_TYPE(c, t)            ((c & 0xFFFFFFFF0FFFFFFF) | (t << 28))   
 
 int64_t ***initLattice();
-void drawLatticeSite(int x, int y, int z, int64_t value, float xrot, float yrot);
+void drawLatticeSite(int x, int y, int z, int64_t value, float xrot, float yrot, int64_t ***lattice);

@@ -25,7 +25,7 @@ int64_t ***initLattice() {
   return ptr;
 }
 
-void drawLatticeSite(int x, int y, int z, int64_t value, float xrot, float yrot) {
+void drawLatticeSite(int x, int y, int z, int64_t value, float xrot, float yrot, int64_t ***lattice) {
   glLoadIdentity();                       // Reset the model-view matrix
   glTranslatef((x - (MODEL_SIZE_X/2)) * translationX, (y - (MODEL_SIZE_Y/2)) * translationY, (z - (MODEL_SIZE_Z/2)) * translationZ); 
   
@@ -35,56 +35,69 @@ void drawLatticeSite(int x, int y, int z, int64_t value, float xrot, float yrot)
         return;
         break;
       case VASCULAR:
-        glColor4f(1.0f, 0.0f, 0.0f, 0.4f);    
+        glColor4f(1.0f, 0.0f, 0.0f, 1.0f);    
         break;
       case TUMOR_NORM:
-        glColor4f(0.0f, 1.0f, 0.0f, 0.4f);    
+        glColor4f(0.0f, 1.0f, 0.0f, 1.0f);    
         break;
       case TUMOR_NECROSIS:
-        glColor4f(0.0f, 0.0f, 1.0f, 0.4f);    
+        glColor4f(0.0f, 0.0f, 1.0f, 1.0f);    
         break;
       case TUMOR_STEM:
-        glColor4f(0.2f, 0.6f, 0.8f, 0.4f);    
+        glColor4f(0.2f, 0.6f, 0.8f, 1.0f);    
         break;
       default:
-        glColor4f(1.0f, 1.0f, 1.0f, 0.4f);
+        glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
     }
+    int sigma = SIGMA(lattice[x][y][z]);
 
     // Top face
-    glVertex3f( viewScaleX, viewScaleY, -viewScaleZ);
-    glVertex3f(-viewScaleX, viewScaleY, -viewScaleZ);
-    glVertex3f(-viewScaleX, viewScaleY,  viewScaleZ);
-    glVertex3f( viewScaleX, viewScaleY,  viewScaleZ);
+    if(y == MODEL_SIZE_Y - 1 || SIGMA(lattice[x][y + 1][z]) != sigma) {
+      glVertex3f( viewScaleX, viewScaleY, -viewScaleZ);
+      glVertex3f(-viewScaleX, viewScaleY, -viewScaleZ);
+      glVertex3f(-viewScaleX, viewScaleY,  viewScaleZ);
+      glVertex3f( viewScaleX, viewScaleY,  viewScaleZ);
+    }
 
     // Bottom face 
-    glVertex3f( viewScaleX, -viewScaleY,  viewScaleZ);
-    glVertex3f(-viewScaleX, -viewScaleY,  viewScaleZ);
-    glVertex3f(-viewScaleX, -viewScaleY, -viewScaleZ);
-    glVertex3f( viewScaleX, -viewScaleY, -viewScaleZ);
+    if(y == 0 || SIGMA(lattice[x][y - 1][z]) != sigma) { 
+      glVertex3f( viewScaleX, -viewScaleY,  viewScaleZ);
+      glVertex3f(-viewScaleX, -viewScaleY,  viewScaleZ);
+      glVertex3f(-viewScaleX, -viewScaleY, -viewScaleZ);
+      glVertex3f( viewScaleX, -viewScaleY, -viewScaleZ);
+    }
 
-    // Front face  
-    glVertex3f( viewScaleX,  viewScaleY, viewScaleZ);
-    glVertex3f(-viewScaleX,  viewScaleY, viewScaleZ);
-    glVertex3f(-viewScaleX, -viewScaleY, viewScaleZ);
-    glVertex3f( viewScaleX, -viewScaleY, viewScaleZ);
+    // Front face 
+    if(z == MODEL_SIZE_Z - 1 || SIGMA(lattice[x][y][z + 1]) != sigma) {
+      glVertex3f( viewScaleX,  viewScaleY, viewScaleZ);
+      glVertex3f(-viewScaleX,  viewScaleY, viewScaleZ);
+      glVertex3f(-viewScaleX, -viewScaleY, viewScaleZ);
+      glVertex3f( viewScaleX, -viewScaleY, viewScaleZ);
+    }
 
     // Back face 
-    glVertex3f( viewScaleX, -viewScaleY, -viewScaleZ);
-    glVertex3f(-viewScaleX, -viewScaleY, -viewScaleZ);
-    glVertex3f(-viewScaleX,  viewScaleY, -viewScaleZ);
-    glVertex3f( viewScaleX,  viewScaleY, -viewScaleZ);
+    if(z == 0 || SIGMA(lattice[x][y][z - 1]) != sigma) {
+      glVertex3f( viewScaleX, -viewScaleY, -viewScaleZ);
+      glVertex3f(-viewScaleX, -viewScaleY, -viewScaleZ);
+      glVertex3f(-viewScaleX,  viewScaleY, -viewScaleZ);
+      glVertex3f( viewScaleX,  viewScaleY, -viewScaleZ);
+    }
 
     // Left face 
-    glVertex3f(-viewScaleX,  viewScaleY,  viewScaleZ);
-    glVertex3f(-viewScaleX,  viewScaleY, -viewScaleZ);
-    glVertex3f(-viewScaleX, -viewScaleY, -viewScaleZ);
-    glVertex3f(-viewScaleX, -viewScaleY,  viewScaleZ);
+    if(x == 0 || SIGMA(lattice[x - 1][y][z]) != sigma) {
+      glVertex3f(-viewScaleX,  viewScaleY,  viewScaleZ);
+      glVertex3f(-viewScaleX,  viewScaleY, -viewScaleZ);
+      glVertex3f(-viewScaleX, -viewScaleY, -viewScaleZ);
+      glVertex3f(-viewScaleX, -viewScaleY,  viewScaleZ);
+    }
 
     // Right face 
-    glVertex3f(viewScaleX,  viewScaleY, -viewScaleZ);
-    glVertex3f(viewScaleX,  viewScaleY,  viewScaleZ);
-    glVertex3f(viewScaleX, -viewScaleY,  viewScaleZ);
-    glVertex3f(viewScaleX, -viewScaleY, -viewScaleZ);
+    if(x == MODEL_SIZE_X - 1 || SIGMA(lattice[x + 1][y][z]) != sigma) {
+      glVertex3f(viewScaleX,  viewScaleY, -viewScaleZ);
+      glVertex3f(viewScaleX,  viewScaleY,  viewScaleZ);
+      glVertex3f(viewScaleX, -viewScaleY,  viewScaleZ);
+      glVertex3f(viewScaleX, -viewScaleY, -viewScaleZ);
+    }
     
   glEnd();
 }

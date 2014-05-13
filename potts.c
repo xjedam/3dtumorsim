@@ -65,7 +65,7 @@ void saveModel(FILE *fp, int64_t ***lattice, cell_info_t *cells) {
 
 // returns ammount of cells loaded
 int loadModel(FILE *fp, int64_t ***lattice, cell_info_t *cells) {
-	int x, y, z, sigma, temperature, type, i, max = 0;
+	int x, y, z, sigma, temperature, type, i, max = 0, j, k;
 	while(fscanf(fp, "%i%i%i:%i%i%f", &x, &y, &z, &type, &sigma, &temperature) != EOF) {
 		lattice[x][y][z] = SET_TYPE(SET_SIGMA(0,sigma), type);
 		cells[sigma].temperature = temperature;
@@ -77,7 +77,7 @@ int loadModel(FILE *fp, int64_t ***lattice, cell_info_t *cells) {
     }
 	}
 
-  // calculate global energy
+  // calculate global energy: volume, membrane
   int membranePart = 0;
   int volumePart = 0;
   for(i = 1; i <= max; i++) {
@@ -85,6 +85,23 @@ int loadModel(FILE *fp, int64_t ***lattice, cell_info_t *cells) {
     volumePart += pow(cells[i].volume - targetVolume[cells[i].type], 2);
   }
   globalEnergy = MEMBRANE_RESISTANCE * membranePart + VOLUME_RESISTANCE * volumePart;
+
+  // add global energy: adhesion part
+  for(i = 0; i < MODEL_SIZE_X; i++) {
+    for(j = 0; j < MODEL_SIZE_Y; j++) {
+      for(k = 0; k < MODEL_SIZE_Z; k++) {
+        if(i + 1 < MODEL_SIZE_X && SIGMA(lattice[i][j][k]) != SIGMA(lattice[i + 1][j][k])) {
+          globalEnergy += bondEnergy[SIGMA(lattice[i][j][k])][SIGMA(lattice[i + 1][j][k])];
+        }
+        if(j + 1 < MODEL_SIZE_Y && SIGMA(lattice[i][j][k]) != SIGMA(lattice[i][j + 1][k])) {
+          globalEnergy += bondEnergy[SIGMA(lattice[i][j][k])][SIGMA(lattice[i][j + 1][k])];
+        }
+        if(k + 1 < MODEL_SIZE_Z && SIGMA(lattice[i][j][k]) != SIGMA(lattice[i][j][k + 1])) {
+          globalEnergy += bondEnergy[SIGMA(lattice[i][j][k])][SIGMA(lattice[i][j][k + 1])];
+        }
+      }
+    }
+  }
 
 	fclose(fp);
   return max;
@@ -121,22 +138,72 @@ int getMembraneChangeRemove(int x, int y, int z, int64_t ***lattice, int sigma) 
   int change = -6;
 
   if(x > 0 && SIGMA(lattice[x - 1][y][z]) == sigma) {
-    change++;
+    change += 2;
   }
   if(x < MODEL_SIZE_X - 1 && SIGMA(lattice[x + 1][y][z]) == sigma) {
-    change++;
+    change += 2;
   }
   if(y > 0 && SIGMA(lattice[x][y - 1][z]) == sigma) {
-    change++;
+    change += 2;
   }
   if(y < MODEL_SIZE_Y - 1 && SIGMA(lattice[x][y + 1][z]) == sigma) {
-    change++;
+    change += 2;
   }
   if(z > 0 && SIGMA(lattice[x][y][z - 1]) == sigma) {
-    change++;
+    change += 2;
   }
   if(z < MODEL_SIZE_Z - 1 && SIGMA(lattice[x][y][z + 1]) == sigma) {
-    change++;
+    change += 2;
+  }
+
+  return change;
+}
+
+int getAdhesionChangeRemove(int x, int y, int z, int64_t ***lattice, int sigma) {
+  int change = 0;
+
+  if(x > 0 && SIGMA(lattice[x - 1][y][z]) != sigma) {
+    change -= bondEnergy[SIGMA(lattice[x - 1][y][z])][sigma];
+  }
+  if(x < MODEL_SIZE_X - 1 && SIGMA(lattice[x + 1][y][z]) != sigma) {
+    change -= bondEnergy[SIGMA(lattice[x + 1][y][z])][sigma];
+  }
+  if(y > 0 && SIGMA(lattice[x][y - 1][z]) != sigma) {
+    change -= bondEnergy[SIGMA(lattice[x][y - 1][z])][sigma];
+  }
+  if(y < MODEL_SIZE_Y - 1 && SIGMA(lattice[x][y + 1][z]) != sigma) {
+    change -= bondEnergy[SIGMA(lattice[x][y + 1][z])][sigma];
+  }
+  if(z > 0 && SIGMA(lattice[x][y][z - 1]) != sigma) {
+    change -= bondEnergy[SIGMA(lattice[x][y][z - 1])][sigma];
+  }
+  if(z < MODEL_SIZE_Z - 1 && SIGMA(lattice[x][y][z + 1]) != sigma) {
+    change -= bondEnergy[SIGMA(lattice[x][y][z + 1])][sigma];
+  }
+
+  return change;
+}
+
+int getAdhesionChangeInsert(int x, int y, int z, int64_t ***lattice, int sigma) {
+  int change = 0;
+
+  if(x > 0 && SIGMA(lattice[x - 1][y][z]) != sigma) {
+    change += bondEnergy[SIGMA(lattice[x - 1][y][z])][sigma];
+  }
+  if(x < MODEL_SIZE_X - 1 && SIGMA(lattice[x + 1][y][z]) != sigma) {
+    change += bondEnergy[SIGMA(lattice[x + 1][y][z])][sigma];
+  }
+  if(y > 0 && SIGMA(lattice[x][y - 1][z]) != sigma) {
+    change += bondEnergy[SIGMA(lattice[x][y - 1][z])][sigma];
+  }
+  if(y < MODEL_SIZE_Y - 1 && SIGMA(lattice[x][y + 1][z]) != sigma) {
+    change += bondEnergy[SIGMA(lattice[x][y + 1][z])][sigma];
+  }
+  if(z > 0 && SIGMA(lattice[x][y][z - 1]) != sigma) {
+    change += bondEnergy[SIGMA(lattice[x][y][z - 1])][sigma];
+  }
+  if(z < MODEL_SIZE_Z - 1 && SIGMA(lattice[x][y][z + 1]) != sigma) {
+    change += bondEnergy[SIGMA(lattice[x][y][z + 1])][sigma];
   }
 
   return change;
@@ -191,10 +258,13 @@ int checkAndMoveToSite(int x1, int y1, int z1, int x2, int y2, int z2, int64_t *
     newEnergy -= oldEnergyValues;
     // add energy of new source cell and target cell membrane state
     newEnergy += (getMembraneChangeInsert(x2, y2, z2, lattice, sigmaSource) + membranePartSource) * MEMBRANE_RESISTANCE;
-    newEnergy += (getMembraneChangeRemove(x2, y2, z2, lattice, sigmaSource) + membranePartTarget) * MEMBRANE_RESISTANCE;
+    newEnergy += (getMembraneChangeRemove(x2, y2, z2, lattice, sigmaTarget) + membranePartTarget) * MEMBRANE_RESISTANCE;
     // add energy of new source cell and target cell volume state
     newEnergy += (volumePartSource + 1) * VOLUME_RESISTANCE;
     newEnergy += (volumePartTarget - 1) * VOLUME_RESISTANCE;
+    // add energy of adhesion change
+    newEnergy += getAdhesionChangeInsert(x2, y2, z2, lattice, sigmaSource);
+    newEnergy += getAdhesionChangeRemove(x2, y2, z2, lattice, sigmaTarget);
 
     int deltaEnergy = globalEnergy - newEnergy;
     if(deltaEnergy < ENERGY_TRESHOLD || ((float)rand()) / ((float)RAND_MAX) < exp(-(deltaEnergy + ENERGY_TRESHOLD) / TEMPERATURE)) {
@@ -202,11 +272,15 @@ int checkAndMoveToSite(int x1, int y1, int z1, int x2, int y2, int z2, int64_t *
       cells[sigmaSource].volume++;
       cells[sigmaTarget].volume--;
       cells[sigmaSource].membraneArea += getMembraneChangeInsert(x2, y2, z2, lattice, sigmaSource);
-      cells[sigmaTarget].membraneArea -= getMembraneChangeRemove(x2, y2, z2, lattice, sigmaSource);
+      cells[sigmaTarget].membraneArea -= getMembraneChangeRemove(x2, y2, z2, lattice, sigmaTarget);
       lattice[x2][y2][z2] = lattice[x1][y1][z1];
       return 1;
     }
 
   }
   return 0;
+}
+
+void splitCell(int x, int y, int z, int64_t ***lattice, cell_info_t *cells) {
+  
 }
