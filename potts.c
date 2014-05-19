@@ -40,7 +40,7 @@ cell_info_t *initCells() {
 	cell_info_t *cells = (cell_info_t *)malloc(size * sizeof(cell_info_t));
 	for(i = 0; i < size; i++) {
 		cells[i].temperature = 36.7;
-		cells[i].type = 0;
+		cells[i].type = MEDIUM;
 		cells[i].volume = 30;
 		cells[i].membraneArea = 30;
 	}
@@ -67,9 +67,18 @@ void saveModel(FILE *fp, int64_t ***lattice, cell_info_t *cells) {
 int loadModel(FILE *fp, int64_t ***lattice, cell_info_t *cells) {
 	int x, y, z, sigma, temperature, type, i, max = 0, j, k;
 	while(fscanf(fp, "%i%i%i:%i%i%f", &x, &y, &z, &type, &sigma, &temperature) != EOF) {
+    if(cells[sigma].type != type) {
+      cells[sigma].subcells = (site_t *)malloc(targetVolume[type] * 2 * sizeof(site_t));
+      cells[sigma].type = type;
+      cells[sigma].temperature = temperature;
+      cells[sigma].volume = 0;
+      cells[sigma].membraneArea = 0;
+    }
 		lattice[x][y][z] = SET_TYPE(SET_SIGMA(0,sigma), type);
-		cells[sigma].temperature = temperature;
-		cells[sigma].type = type;
+    cells[sigma].subcells[cells[sigma].volume].val = &lattice[x][y][z];
+    cells[sigma].subcells[cells[sigma].volume].x = x;
+    cells[sigma].subcells[cells[sigma].volume].y = y;
+    cells[sigma].subcells[cells[sigma].volume].z = z;
 		cells[sigma].volume += 1;
     cells[sigma].membraneArea += getMembraneChangeInsert(x, y, z, lattice, sigma);
     if(sigma > max) {
@@ -104,6 +113,7 @@ int loadModel(FILE *fp, int64_t ***lattice, cell_info_t *cells) {
   }
 
 	fclose(fp);
+  DEBUG(puts("loaded model");)
   return max;
 }
 
@@ -210,6 +220,7 @@ int getAdhesionChangeInsert(int x, int y, int z, int64_t ***lattice, int sigma) 
 }
 
 void calculateNextStep(int64_t ***lattice, int cellCount, cell_info_t *cells) {
+  DEBUG(puts("calculating next state");)
   int i, j, x, y, z, xModiff, yModiff, zModiff;
   for(i = 0; i < cellCount; i++) {
     // reset medium
@@ -238,42 +249,24 @@ void calculateNextStep(int64_t ***lattice, int cellCount, cell_info_t *cells) {
 // checks whether cell should expand to target lattie and performs the expansion if it should
 // returns 1 if expansion has been performed, and 0 otherwise
 int checkAndMoveToSite(int x1, int y1, int z1, int x2, int y2, int z2, int64_t ***lattice, cell_info_t *cells) {
-  long long newEnergy = globalEnergy;
+  int i;  
 
   if(x2 >= 0 && x2 < MODEL_SIZE_X && y2 >= 0 && y2 < MODEL_SIZE_Y && z2 >= 0 && z2 < MODEL_SIZE_Z &&
       SIGMA(lattice[x2][y2][z2]) != SIGMA(lattice[x1][y1][z1])) {
     int sigmaTarget = SIGMA(lattice[x2][y2][z2]);
     int sigmaSource = SIGMA(lattice[x1][y1][z1]);
 
-    int membranePartTarget = pow(cells[sigmaTarget].membraneArea - targetMembrane[cells[sigmaTarget].type], 2);
-    int membranePartSource = pow(cells[sigmaSource].membraneArea - targetMembrane[cells[sigmaSource].type], 2);
-    int membranePart =  membranePartSource + membranePartTarget;
-    int volumePartTarget = pow(cells[sigmaTarget].volume - targetVolume[cells[sigmaTarget].type], 2);
-    int volumePartSource = pow(cells[sigmaSource].volume - targetVolume[cells[sigmaSource].type], 2);
-    int volumePart = volumePartTarget + volumePartSource;
-
-    int oldEnergyValues = MEMBRANE_RESISTANCE * membranePart + VOLUME_RESISTANCE * volumePart;
-
-    // subtracts old cell membrane and volume values
-    newEnergy -= oldEnergyValues;
-    // add energy of new source cell and target cell membrane state
-    newEnergy += (getMembraneChangeInsert(x2, y2, z2, lattice, sigmaSource) + membranePartSource) * MEMBRANE_RESISTANCE;
-    newEnergy += (getMembraneChangeRemove(x2, y2, z2, lattice, sigmaTarget) + membranePartTarget) * MEMBRANE_RESISTANCE;
-    // add energy of new source cell and target cell volume state
-    newEnergy += (volumePartSource + 1) * VOLUME_RESISTANCE;
-    newEnergy += (volumePartTarget - 1) * VOLUME_RESISTANCE;
-    // add energy of adhesion change
-    newEnergy += getAdhesionChangeInsert(x2, y2, z2, lattice, sigmaSource);
-    newEnergy += getAdhesionChangeRemove(x2, y2, z2, lattice, sigmaTarget);
+    long long newEnergy = getNewEnergyLatticeChange(x2, y2, z2, lattice, cells, sigmaSource, sigmaTarget);
 
     int deltaEnergy = globalEnergy - newEnergy;
     if(deltaEnergy < ENERGY_TRESHOLD || ((float)rand()) / ((float)RAND_MAX) < exp(-(deltaEnergy + ENERGY_TRESHOLD) / TEMPERATURE)) {
       globalEnergy = newEnergy;
-      cells[sigmaSource].volume++;
-      cells[sigmaTarget].volume--;
-      cells[sigmaSource].membraneArea += getMembraneChangeInsert(x2, y2, z2, lattice, sigmaSource);
-      cells[sigmaTarget].membraneArea -= getMembraneChangeRemove(x2, y2, z2, lattice, sigmaTarget);
+      DEBUG(printf("\tinvading sigma %i [%i, %i, %i] to sigma %i [%i, %i, %i]\n", sigmaSource, x1, y1, z1, sigmaTarget, x2, y2, z2);)
+      
+      changeSiteOwner(x2, y2, z2, lattice, cells, sigmaSource, sigmaTarget);
+
       lattice[x2][y2][z2] = lattice[x1][y1][z1];
+      DEBUG(printf("\tinvading completed\n");)
       return 1;
     }
 
@@ -281,6 +274,106 @@ int checkAndMoveToSite(int x1, int y1, int z1, int x2, int y2, int z2, int64_t *
   return 0;
 }
 
-void splitCell(int x, int y, int z, int64_t ***lattice, cell_info_t *cells) {
+void splitCell(int x, int y, int z, int64_t ***lattice, cell_info_t *cells, int sigma) {
+  int i, subcellsToSplit = cells[sigma].volume / 2;
+  DEBUG(printf("\tsplitting cell %i into %i, starting at [%i, %i, %i]. Subcells to split: %i\n", sigma, numCells, x, y, z, subcellsToSplit);)
+
+  cells[numCells + 1].volume = 0;
+  cells[numCells + 1].membraneArea = 0;
+  cells[numCells + 1].type = cells[sigma].type;
+  cells[numCells + 1].subcells = (site_t *)malloc(targetVolume[cells[numCells + 1].type] * 2 * sizeof(site_t));
+
+  long long newEnergy = getNewEnergyLatticeChange(x, y, z, lattice, cells, numCells + 1, sigma);
+  globalEnergy = newEnergy;
+  lattice[x][y][z] = SET_SIGMA(lattice[x][y][z], ++numCells);
+
+  changeSiteOwner(x, y, z, lattice, cells, numCells, sigma);
   
+  int numSubcells = 0;
+  while(subcellsToSplit > 0 && numSubcells != cells[numCells].volume) {
+    numSubcells = cells[numCells].volume;
+    for(i = 0; i < numSubcells; i++) {
+      site_t *site = &cells[numCells].subcells[i];
+      if((site->x) + 1 < MODEL_SIZE_X && SIGMA(lattice[(site->x) + 1][site->y][site->z]) == sigma) {
+        changeSiteOwner((site->x) + 1, site->y, site->z, lattice, cells, numCells, sigma);
+        subcellsToSplit--;
+      }
+      if(subcellsToSplit > 0 && (site->x) - 1 >= 0 && SIGMA(lattice[(site->x) - 1][site->y][site->z]) == sigma) {
+        changeSiteOwner((site->x) - 1, site->y, site->z, lattice, cells, numCells, sigma);
+        subcellsToSplit--;
+      }
+      if(subcellsToSplit > 0 && (site->y) + 1 < MODEL_SIZE_Y && SIGMA(lattice[site->x][(site->y) + 1][site->z]) == sigma) {
+        changeSiteOwner(site->x, (site->y) + 1, site->z, lattice, cells, numCells, sigma);
+        subcellsToSplit--;
+      }
+      if(subcellsToSplit > 0 && (site->y) - 1 >= 0 && SIGMA(lattice[site->x][(site->y) - 1][site->z]) == sigma) {
+        changeSiteOwner(site->x, (site->y) - 1, site->z, lattice, cells, numCells, sigma);
+        subcellsToSplit--;
+      }
+      if(subcellsToSplit > 0 && (site->z) + 1 < MODEL_SIZE_Z && SIGMA(lattice[site->x][site->y][(site->z) + 1]) == sigma) {
+        changeSiteOwner(site->x, site->y, (site->z) + 1, lattice, cells, numCells, sigma);
+        subcellsToSplit--;
+      }
+      if(subcellsToSplit > 0 && (site->z) - 1 >= 0 && SIGMA(lattice[site->x][site->y][(site->z) - 1]) == sigma) {
+        changeSiteOwner(site->x, site->y, (site->z) - 1, lattice, cells, numCells, sigma);
+        subcellsToSplit--;
+      }
+    }
+  }
+}
+
+long long getNewEnergyLatticeChange(int x, int y, int z, int64_t ***lattice, cell_info_t *cells, int sigmaTo, int sigmaFrom) {
+  long long newEnergy = globalEnergy;
+
+  int membranePartTarget = pow(cells[sigmaFrom].membraneArea - targetMembrane[cells[sigmaFrom].type], 2);
+  int membranePartSource = pow(cells[sigmaTo].membraneArea - targetMembrane[cells[sigmaTo].type], 2);
+  int membranePart =  membranePartSource + membranePartTarget;
+  int volumePartTarget = pow(cells[sigmaFrom].volume - targetVolume[cells[sigmaFrom].type], 2);
+  int volumePartSource = pow(cells[sigmaTo].volume - targetVolume[cells[sigmaTo].type], 2);
+  int volumePart = volumePartTarget + volumePartSource;
+
+  int oldEnergyValues = MEMBRANE_RESISTANCE * membranePart + VOLUME_RESISTANCE * volumePart;
+
+  // subtracts old cell membrane and volume values
+  newEnergy -= oldEnergyValues;
+  // add energy of new source cell and target cell membrane state
+  newEnergy += (getMembraneChangeInsert(x, y, z, lattice, sigmaTo) + membranePartSource) * MEMBRANE_RESISTANCE;
+  newEnergy += (getMembraneChangeRemove(x, y, z, lattice, sigmaFrom) + membranePartTarget) * MEMBRANE_RESISTANCE;
+  // add energy of new source cell and target cell volume state
+  newEnergy += (volumePartSource + 1) * VOLUME_RESISTANCE;
+  newEnergy += (volumePartTarget - 1) * VOLUME_RESISTANCE;
+  // add energy of adhesion change
+  newEnergy += getAdhesionChangeInsert(x, y, z, lattice, sigmaTo);
+  newEnergy += getAdhesionChangeRemove(x, y, z, lattice, sigmaFrom);
+
+  return newEnergy;
+}
+
+void changeSiteOwner(int x, int y, int z, int64_t ***lattice, cell_info_t *cells, int sigmaTo, int sigmaFrom) {
+  int i;
+  cells[sigmaTo].volume++;
+  cells[sigmaFrom].volume--;
+  cells[sigmaTo].membraneArea += getMembraneChangeInsert(x, y, z, lattice, sigmaTo);
+  cells[sigmaFrom].membraneArea -= getMembraneChangeRemove(x, y, z, lattice, sigmaFrom);
+
+  if(sigmaTo != 0) {
+    // DEBUG(printf("\taddr %i", &cells[sigmaTo].subcells[cells[sigmaTo].volume - 1]);)
+    // DEBUG(printf(", val %i\n", cells[sigmaTo].subcells[cells[sigmaTo].volume - 1].val);)
+    // move site from target cell definition to source
+    cells[sigmaTo].subcells[cells[sigmaTo].volume - 1].x = x;
+    cells[sigmaTo].subcells[cells[sigmaTo].volume - 1].y = y;
+    cells[sigmaTo].subcells[cells[sigmaTo].volume - 1].z = z;
+    cells[sigmaTo].subcells[cells[sigmaTo].volume - 1].val = &lattice[x][y][z];
+  }
+  
+  if(sigmaFrom != 0) {
+    for(i = 0; i <= cells[sigmaFrom].volume; i++) {
+      if(cells[sigmaFrom].subcells[i].val == &lattice[x][y][z]) {
+        cells[sigmaFrom].subcells[i].x = cells[sigmaFrom].subcells[cells[sigmaFrom].volume].x;
+        cells[sigmaFrom].subcells[i].y = cells[sigmaFrom].subcells[cells[sigmaFrom].volume].y;
+        cells[sigmaFrom].subcells[i].z = cells[sigmaFrom].subcells[cells[sigmaFrom].volume].z;
+        cells[sigmaFrom].subcells[i].val = cells[sigmaFrom].subcells[cells[sigmaFrom].volume].val;
+      }
+    }
+  }
 }

@@ -23,7 +23,7 @@ void initGL() {
 // Clears the current window and draws a triangle.
 void display() {
   int i, j, k;
-  printf("rot: %f, %f\n", xrot, yrot);
+  DEBUG(printf("rot: %f, %f\n", xrot, yrot);)
   if(!isPause) {
     stop = clock();
     if(((float)(stop - start))/CLOCKS_PER_SEC < ITER_DELAY && !isPause){
