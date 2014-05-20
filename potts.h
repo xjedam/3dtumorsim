@@ -1,8 +1,10 @@
-#define	MEMBRANE_RESISTANCE 10
-#define VOLUME_RESISTANCE 10
+#ifndef _POTTS_H
+#define _POTTS_H
+#define	MEMBRANE_RESISTANCE 20
+#define VOLUME_RESISTANCE 20
 #define ENERGY_TRESHOLD 100
 #define TEMPERATURE 10
-#define CELL_OVERSIZE_SPLIT_TRESHOLD 0.30			
+#define CELL_OVERSIZE_SPLIT_TRESHOLD 1.30			
 
 typedef struct SITE {
 	int x;
@@ -19,6 +21,13 @@ typedef struct POTTS_T {
   site_t *subcells;
 } cell_info_t;
 
+typedef struct ENERGY_STRUCT {
+  long long total;
+  long long adhesion;
+  long long membrane;
+  long long volume;
+} energy_t;
+
 cell_info_t *initCells();
 int loadModel(FILE *fp, int64_t ***lattice, cell_info_t *cells);
 void saveModel(FILE *fp, int64_t ***lattice, cell_info_t *cells);
@@ -29,5 +38,7 @@ int getAdhesionChangeRemove(int x, int y, int z, int64_t ***lattice, int sigma);
 void calculateNextStep(int64_t ***lattice, int cellCount, cell_info_t *cells);
 int checkAndMoveToSite(int x1, int y1, int z1, int x2, int y2, int z2, int64_t ***lattice, cell_info_t *cells);
 void splitCell(int x, int y, int z, int64_t ***lattice, cell_info_t *cells, int sigma);
-long long getNewEnergyLatticeChange(int x, int y, int z, int64_t ***lattice, cell_info_t *cells, int sigmaTo, int sigmaFrom);
+energy_t getNewEnergyLatticeChange(int x, int y, int z, int64_t ***lattice, cell_info_t *cells, int sigmaTo, int sigmaFrom);
 void changeSiteOwner(int x, int y, int z, int64_t ***lattice, cell_info_t *cells, int sigmaTo, int sigmaFrom);
+
+#endif

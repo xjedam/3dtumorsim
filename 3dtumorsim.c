@@ -35,15 +35,17 @@ void display() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);             // To operate on model-view matrix
     
-    for(i = 0; i < MODEL_SIZE_X; i++) {
-      for(j = 0; j < MODEL_SIZE_Y; j++) {
-        for(k = 0; k < MODEL_SIZE_Z; k++) {
-          if(lattice[i][j][k] != 0) {
-            drawLatticeSite(i, j, k, lattice[i][j][k], xrot, yrot, lattice);
-          }
-        }
-      }
-    }
+    // for(i = 0; i < MODEL_SIZE_X; i++) {
+    //   for(j = 0; j < MODEL_SIZE_Y; j++) {
+    //     for(k = 0; k < MODEL_SIZE_Z; k++) {
+    //       if(lattice[i][j][k] != 0) {
+    //         drawLatticeSite(i, j, k, lattice[i][j][k], xrot, yrot, lattice);
+    //       }
+    //     }
+    //   }
+    // }
+
+    drawCells(xrot, yrot, lattice, cells);
 
     calculateNextStep(lattice, numCells, cells);
     
@@ -115,7 +117,6 @@ void processSpecialKeys(int key, int x, int y) {
 void onReshape(int w, int h) {
   width = w;
   height = h;
-  float ratio =  ((float) w) / ((float) h); // window aspect ratio
 	glMatrixMode(GL_PROJECTION); // projection matrix is active
 	glLoadIdentity(); // reset the projection
   glRotatef(yrot, 1.0f, 0.0f, 0.0f);
@@ -176,4 +177,6 @@ int main(int argc, char** argv) {
   // never returns; the program only exits when the user closes the main
   // window or kills the process.
   glutMainLoop();
+
+  return 0;
 }

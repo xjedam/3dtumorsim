@@ -1,3 +1,5 @@
+#include "potts.h"
+
 #define SIGMA(site)               (site & 0xFFFFFFF) 
 #define SET_SIGMA(c, d)           ((c & 0xFFFFFFFFF0000000) | d) 
 
@@ -12,3 +14,4 @@
 
 int64_t ***initLattice();
 void drawLatticeSite(int x, int y, int z, int64_t value, float xrot, float yrot, int64_t ***lattice);
+void drawCells(float xrot, float yrot, int64_t ***lattice, cell_info_t *cells);

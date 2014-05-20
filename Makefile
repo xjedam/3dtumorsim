@@ -1,4 +1,4 @@
-CFLAGS = -I"freeglut\include" -L"freeglut\lib" -lfreeglut -lopengl32 -lm
+CFLAGS = -I"freeglut\include" -L"freeglut\lib" -lfreeglut -lopengl32 -lm -ggdb -Wall
 
 3dtumorsim: 3dtumorsim.c lattice.o potts.o
 	gcc 3dtumorsim.c lattice.o potts.o -o bin/3dtumorsim $(CFLAGS)
