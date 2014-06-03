@@ -4,13 +4,13 @@
 #include <time.h>
 
 #define WINDOW_NAME       "3d tumor simulator"
-#define MODEL_SIZE_X      20
-#define MODEL_SIZE_Y      20
-#define MODEL_SIZE_Z      20
-#define WINDOW_X          500
-#define WINDOW_Y          500
+#define MODEL_SIZE_X      30
+#define MODEL_SIZE_Y      30
+#define MODEL_SIZE_Z      30
+#define WINDOW_X          1000
+#define WINDOW_Y          1000
 #define SITE_SIZE         7.0f
-#define ITER_DELAY        0.4
+#define ITER_DELAY        0.2
 #define DEBUG(a)          a
 
 #if defined(__CYGWIN__) || defined(_WIN64) || defined(_WIN32)
