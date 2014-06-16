@@ -10,7 +10,7 @@
 #define WINDOW_X          1000
 #define WINDOW_Y          1000
 #define SITE_SIZE         7.0f
-#define ITER_DELAY        0.2
+#define ITER_DELAY        0.0
 #define DEBUG(a)          a
 
 #if defined(__CYGWIN__) || defined(_WIN64) || defined(_WIN32)

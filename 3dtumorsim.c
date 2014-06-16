@@ -7,12 +7,13 @@ cell_info_t *cells;
 float xrot = 0.0, yrot = 0.0;
 int xClick, yClick, width, height;
 int lmbDown = 0;
-int isPause = 0;
+int isPause = 1;
 int numCells = 0;
 clock_t start, stop;
+int iterationNumber = 0;
 
 void initGL() {
-   glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Set background color to black and opaque
+   glClearColor(0.6f, 0.6f, 0.6f, 1.0f); // Set background color to black and opaque
    glClearDepth(1.0f);                   // Set background depth to farthest
    glEnable(GL_DEPTH_TEST);   // Enable depth testing for z-culling
    glDepthFunc(GL_LEQUAL);    // Set the type of depth-test
@@ -23,7 +24,7 @@ void initGL() {
 // Clears the current window and draws a triangle.
 void display() {
   int i, j, k;
-  DEBUG(printf("rot: %f, %f\n", xrot, yrot);)
+
   if(!isPause) {
     stop = clock();
     if(((float)(stop - start))/CLOCKS_PER_SEC < ITER_DELAY && !isPause){
@@ -31,9 +32,7 @@ void display() {
     }
     start = clock();
     // Set every pixel in the frame buffer to the current clear color.
-    glClearDepth(1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glMatrixMode(GL_MODELVIEW);             // To operate on model-view matrix
+    
     
     // for(i = 0; i < MODEL_SIZE_X; i++) {
     //   for(j = 0; j < MODEL_SIZE_Y; j++) {
@@ -45,8 +44,9 @@ void display() {
     //   }
     // }
 
-    drawCells(xrot, yrot, lattice, cells);
-
+    
+    iterationNumber++;
+    printf("Iteration: %i\n", iterationNumber);
     calculateNextStep(lattice, numCells, cells);
     
     // Drawing is done by specifying a sequence of vertices.  The way these
@@ -58,10 +58,16 @@ void display() {
       // glColor3f(0, 0, 1); glVertex3f(0, 0.75, 0);
     // glEnd();
 
-    glutSwapBuffers();
+    
     // Flush drawing command buffer to make drawing happen as soon as possible.
     // glFlush();
   }
+
+  glClearDepth(1.0f);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glMatrixMode(GL_MODELVIEW);             // To operate on model-view matrix
+  drawCells(xrot, yrot, lattice, cells);
+  glutSwapBuffers();
 }
 
 void processNormalKeys(unsigned char key, int x, int y) {
