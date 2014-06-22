@@ -6,8 +6,8 @@
 // defining bond energy
 int bondEnergy[6][6] = {
   {0, 12, 10, 15, 10, 0},       // MEDIUM
-  {12, 160, 50, 30, 30, 0},      // VASCULAR
-  {10, 50, 90, 8, 8, 0},        // TUMOR_NORM
+  {12, 220, 45, 30, 30, 0},      // VASCULAR
+  {10, 45, 120, 8, 8, 0},        // TUMOR_NORM
   {15, 30, 8, 40, 8, 0},        // TUMOR_NECROSIS
   {10, 30, 8, 8, 8, 0},         // TUMOR_STEM
   {0, 0, 0, 0, 0, 0},
@@ -54,7 +54,7 @@ void saveModel(FILE *fp, int64_t ***lattice, cell_info_t *cells) {
       for(k = 0; k < MODEL_SIZE_Z; k++) {
         int site = lattice[i][j][k];
         if(TYPE(site) != MEDIUM) {
-          fprintf(fp, "%i %i %i: %i %i %f\n", i, j, k, TYPE(site), SIGMA(site), cells[SIGMA(site)].temperature);
+          fprintf(fp, "%i %i %i: %i %i\n", i, j, k, TYPE(site), SIGMA(site));
         }
       }
     }
@@ -66,12 +66,10 @@ void saveModel(FILE *fp, int64_t ***lattice, cell_info_t *cells) {
 // returns ammount of cells loaded
 int loadModel(FILE *fp, int64_t ***lattice, cell_info_t *cells) {
 	int x, y, z, sigma, type, i, max = 0, j, k;
-  float temperature;
-	while(fscanf(fp, "%i%i%i:%i%i%f", &x, &y, &z, &type, &sigma, &temperature) != EOF) {
+	while(fscanf(fp, "%i%i%i:%i%i", &x, &y, &z, &type, &sigma) != EOF) {
     if(cells[sigma].type != type) {
       cells[sigma].subcells = (site_t *)malloc(targetVolume[type] * 2 * sizeof(site_t));
       cells[sigma].type = type;
-      cells[sigma].temperature = temperature;
       cells[sigma].volume = 0;
       cells[sigma].membraneArea = 0;
     }
@@ -326,7 +324,6 @@ void splitCell(int x, int y, int z, int64_t ***lattice, cell_info_t *cells, int 
   int numSubcells = 0;
   while(subcellsToSplit > 0 && numSubcells != cells[numCells].volume) {
     numSubcells = cells[numCells].volume;
-    energy_t newEnergy = {0, 0, 0, 0};
     for(i = 0; i < numSubcells; i++) {
       site_t *site = &cells[numCells].subcells[i];
       if((site->x) + 1 < MODEL_SIZE_X && SIGMA(lattice[(site->x) + 1][site->y][site->z]) == sigma) {

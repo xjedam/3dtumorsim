@@ -60,7 +60,7 @@ void drawCells(float xrot, float yrot, int64_t ***lattice, cell_info_t *cells) {
 
         // Top face
         // DEBUG(printf("\t\t\ty+1 is sig: %lli, type: %lli", SIGMA(lattice[x][y + 1][z]), TYPE(lattice[x][y + 1][z]));)
-        if(y == MODEL_SIZE_Y - 1 || SIGMA(lattice[x][y + 1][z]) != sigma) {
+        if(y >= MODEL_SIZE_Y - 1 || SIGMA(lattice[x][y + 1][z]) != sigma) {
           glVertex3f( viewScaleX, viewScaleY, -viewScaleZ);
           glVertex3f(-viewScaleX, viewScaleY, -viewScaleZ);
           glVertex3f(-viewScaleX, viewScaleY,  viewScaleZ);
@@ -78,7 +78,7 @@ void drawCells(float xrot, float yrot, int64_t ***lattice, cell_info_t *cells) {
 
         // Front face 
         // DEBUG(printf("\t\t\tz+1 is sig: %lli, type: %lli", SIGMA(lattice[x][y][z + 1]), TYPE(lattice[x][y][z + 1]));)
-        if(z == MODEL_SIZE_Z - 1 || SIGMA(lattice[x][y][z + 1]) != sigma) {
+        if(z >= MODEL_SIZE_Z - 1 || SIGMA(lattice[x][y][z + 1]) != sigma) {
           glVertex3f( viewScaleX,  viewScaleY, viewScaleZ);
           glVertex3f(-viewScaleX,  viewScaleY, viewScaleZ);
           glVertex3f(-viewScaleX, -viewScaleY, viewScaleZ);
@@ -105,7 +105,7 @@ void drawCells(float xrot, float yrot, int64_t ***lattice, cell_info_t *cells) {
 
         // Right face 
         // DEBUG(printf("\t\t\tx+1 is sig: %lli, type: %lli", SIGMA(lattice[x + 1][y][z]), TYPE(lattice[x + 1][y][z]));)
-        if(x == MODEL_SIZE_X - 1 || SIGMA(lattice[x + 1][y][z]) != sigma) {
+        if(x >= MODEL_SIZE_X - 1 || SIGMA(lattice[x + 1][y][z]) != sigma) {
           glVertex3f(viewScaleX,  viewScaleY, -viewScaleZ);
           glVertex3f(viewScaleX,  viewScaleY,  viewScaleZ);
           glVertex3f(viewScaleX, -viewScaleY,  viewScaleZ);
