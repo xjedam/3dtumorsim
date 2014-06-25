@@ -6,6 +6,8 @@
 #define TEMPERATURE 25
 #define CELL_OVERSIZE_SPLIT_TRESHOLD 1.9			
 
+// Stores one subcell with its coordinates.
+// val points to main subcell matrix.
 typedef struct SITE {
 	int x;
 	int y;
@@ -13,6 +15,8 @@ typedef struct SITE {
 	int64_t *val;
 } site_t;
 
+// Stores one cell with all its properties
+// and pointers to all its subcells
 typedef struct POTTS_T {
   int membraneArea;
   int volume;
@@ -21,6 +25,7 @@ typedef struct POTTS_T {
   site_t *subcells;
 } cell_info_t;
 
+// Stores global energy
 typedef struct ENERGY_STRUCT {
   long long total;
   long long adhesion;

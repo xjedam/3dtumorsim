@@ -227,6 +227,7 @@ void calculateNextStep(int64_t ***lattice, int cellCount, cell_info_t *cells) {
   int i, j, x, y, z;
   site_t *neighborList = malloc(6 * sizeof(site_t));
   for(i = 0; i < cellCount; i++) {
+
     // reset medium
     cells[0].volume = targetVolume[0];
     cells[0].membraneArea = targetMembrane[0];
@@ -234,7 +235,6 @@ void calculateNextStep(int64_t ***lattice, int cellCount, cell_info_t *cells) {
     x = rand() % MODEL_SIZE_X;
     y = rand() % MODEL_SIZE_Y;
     z = rand() % MODEL_SIZE_Z;
-    //DEBUG(printf("bbb");)
     j = 0;
     if(x < MODEL_SIZE_X - 1 && SIGMA(lattice[x+1][y][z]) != SIGMA(lattice[x][y][z])) {
       neighborList[j].x = x+1; neighborList[j].y = y; neighborList[j++].z = z;
@@ -254,7 +254,7 @@ void calculateNextStep(int64_t ***lattice, int cellCount, cell_info_t *cells) {
     if(z > 0 && SIGMA(lattice[x][y][z-1]) != SIGMA(lattice[x][y][z])) {
       neighborList[j].x = x; neighborList[j].y = y; neighborList[j++].z = z-1;
     }
-    //DEBUG(printf("aaa");)
+
     if(j > 0) {
       int choice = rand() % j;
       checkAndMoveToSite(x, y, z, neighborList[choice].x, neighborList[choice].y, neighborList[choice].z, lattice, cells);
@@ -262,9 +262,8 @@ void calculateNextStep(int64_t ***lattice, int cellCount, cell_info_t *cells) {
     else {
       i--;
     }
-    
   }
-  //free(neighborList);
+ 
   DEBUG(printf("calculating next state done, global energy after: %lli, numCells: %i", globalEnergy.total, numCells);)
 }
 
@@ -366,6 +365,7 @@ void splitCell(int x, int y, int z, int64_t ***lattice, cell_info_t *cells, int 
   }
 }
 
+// returns new global energy value when supplied lattice site changes its owner 
 energy_t getNewEnergyLatticeChange(int x, int y, int z, int64_t ***lattice, cell_info_t *cells, int sigmaTo, int sigmaFrom) {
   energy_t newEnergy = {0, 0, 0, 0};
   int volumePartSource = 0, volumePartTarget = 0, membranePartTarget = 0, membranePartSource = 0;

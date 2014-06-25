@@ -23,7 +23,6 @@ void initGL() {
 
 // Clears the current window and draws a triangle.
 void display() {
-
   if(!isPause) {
     stop = clock();
     if(((float)(stop - start))/CLOCKS_PER_SEC < ITER_DELAY && !isPause){
@@ -78,20 +77,6 @@ void mouseActiveMoveCallback(int x, int y) {
 
 void processSpecialKeys(int key, int x, int y) {
 
-	// switch(key) {
-		// case GLUT_KEY_F1 :
-				// red = 1.0;
-				// green = 0.0;
-				// blue = 0.0; break;
-		// case GLUT_KEY_F2 :
-				// red = 0.0;
-				// green = 1.0;
-				// blue = 0.0; break;
-		// case GLUT_KEY_F3 :
-				// red = 0.0;
-				// green = 0.0;
-				// blue = 1.0; break;
-	// }
 }
 
 void onReshape(int w, int h) {
@@ -107,8 +92,6 @@ void onReshape(int w, int h) {
   glViewport(SITE_SIZE/2, SITE_SIZE/2, w, h);
 }
 
-// Initializes GLUT, the display mode, and main window; registers callbacks;
-// enters the main event loop.
 int main(int argc, char** argv) {
 
   srand(time(NULL));
@@ -147,11 +130,6 @@ int main(int argc, char** argv) {
     FILE *fp = fopen(argv[1], "r");
     numCells = loadModel(fp, lattice, cells);
   }
-  // int i = 0;
-  // for(i = 0; i < MODEL_SIZE_X; i++) {
-  //   lattice[i][i][i] = SET_TYPE(1, (VASCULAR + i) % 2 + 1 );
-  //   printf("placing at [%i, %i, %i] %i\n", i, i, i, (VASCULAR + i) % 2 + 1);
-  // }
 
   // Tell GLUT to start reading and processing events.  This function
   // never returns; the program only exits when the user closes the main
