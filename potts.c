@@ -33,8 +33,10 @@ int targetVolume[6] = {
   0
 };
 
+// global energy value
 energy_t globalEnergy = {0, 0, 0, 0};
 
+// initializes cell_info_t array
 cell_info_t *initCells() {
 	int i, size = MODEL_SIZE_X * MODEL_SIZE_Y * MODEL_SIZE_Z / 8;
 	cell_info_t *cells = (cell_info_t *)malloc(size * sizeof(cell_info_t));
@@ -47,6 +49,7 @@ cell_info_t *initCells() {
 	return cells;
 }
 
+// saves the current model to a file - not used right now
 void saveModel(FILE *fp, int64_t ***lattice, cell_info_t *cells) {
   int i, j, k;
   for(i = 0; i < MODEL_SIZE_X; i++) {
@@ -170,6 +173,7 @@ int getMembraneChangeRemove(int x, int y, int z, int64_t ***lattice, int sigma) 
   return change;
 }
 
+// gets the adhesion energy change when x, y, z was removed
 int getAdhesionChangeRemove(int x, int y, int z, int64_t ***lattice, int sigma) {
   int change = 0, type = TYPE(lattice[x][y][z]);
 
@@ -196,6 +200,7 @@ int getAdhesionChangeRemove(int x, int y, int z, int64_t ***lattice, int sigma) 
   return change;
 }
 
+// gets the adhesion energy change when x, y, z was inserted with given sigma
 int getAdhesionChangeInsert(int x, int y, int z, int64_t ***lattice, int sigma) {
   int change = 0, type = TYPE(lattice[x][y][z]);
 
@@ -222,6 +227,10 @@ int getAdhesionChangeInsert(int x, int y, int z, int64_t ***lattice, int sigma) 
   return change;
 }
 
+// calculates next Monte Carlo step.
+// lattice - sub-cell lattice array
+// cellCount - current cell count
+// cells - list of cells
 void calculateNextStep(int64_t ***lattice, int cellCount, cell_info_t *cells) {
   DEBUG(printf("calculating next state, global energy before: %lli", globalEnergy);)
   int i, j, x, y, z;
@@ -301,25 +310,32 @@ int checkAndMoveToSite(int x1, int y1, int z1, int x2, int y2, int z2, int64_t *
   return 0;
 }
 
+//splits tge cell which has its subcell in x, y, z and has given sigma
 void splitCell(int x, int y, int z, int64_t ***lattice, cell_info_t *cells, int sigma) {
   int i, subcellsToSplit = cells[sigma].volume / 2;
   DEBUG(printf("\t\tsplitting cell %i into %i, starting at [%i, %i, %i]. Subcells to split: %i\n", sigma, numCells, x, y, z, subcellsToSplit);)
 
+  // add a new cell with the same type
   cells[numCells + 1].volume = 0;
   cells[numCells + 1].membraneArea = 0;
   cells[numCells + 1].type = cells[sigma].type;
   cells[numCells + 1].subcells = (site_t *)malloc(targetVolume[cells[numCells + 1].type] * 2 * sizeof(site_t));
 
+  // get the new global energy when x, y, z changes owner to the newly created cell
   energy_t newEnergy = getNewEnergyLatticeChange(x, y, z, lattice, cells, numCells + 1, sigma);
   globalEnergy.total = newEnergy.total; 
   globalEnergy.adhesion = newEnergy.adhesion;
   globalEnergy.membrane = newEnergy.membrane;
   globalEnergy.volume = newEnergy.volume;
   numCells++;
+
+  // update x, y, z lattice with new sigma 
   lattice[x][y][z] = SET_SIGMA(lattice[x][y][z], numCells);
 
+  // update cells array with new changes
   changeSiteOwner(x, y, z, lattice, cells, numCells, sigma);
   
+  // change owner of the neighboring subcells that belong to sigma, untill we split half of the cell
   int numSubcells = 0;
   while(subcellsToSplit > 0 && numSubcells != cells[numCells].volume) {
     numSubcells = cells[numCells].volume;
@@ -403,12 +419,11 @@ energy_t getNewEnergyLatticeChange(int x, int y, int z, int64_t ***lattice, cell
   return newEnergy;
 }
 
+// updates the cells array when x, y, z lattice changes owner
 void changeSiteOwner(int x, int y, int z, int64_t ***lattice, cell_info_t *cells, int sigmaTo, int sigmaFrom) {
   int i;
 
   if(sigmaTo != 0) {
-    // DEBUG(printf("\taddr %i", &cells[sigmaTo].subcells[cells[sigmaTo].volume - 1]);)
-    // DEBUG(printf(", val %i\n", cells[sigmaTo].subcells[cells[sigmaTo].volume - 1].val);)
     // move site from target cell definition to source
     cells[sigmaTo].volume++;
     cells[sigmaTo].membraneArea += getMembraneChangeInsert(x, y, z, lattice, sigmaTo);

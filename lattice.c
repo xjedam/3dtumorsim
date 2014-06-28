@@ -2,6 +2,7 @@
 #include "potts.h"
 #include "lattice.h"
 
+// variables used to position and resize sub-cells
 float viewScaleX = 1.0f / MODEL_SIZE_X / 2;
 float viewScaleY = 1.0f / MODEL_SIZE_Y / 2;
 float viewScaleZ = 1.0f / MODEL_SIZE_Z / 2;
@@ -9,6 +10,7 @@ float translationX = 1.0f / MODEL_SIZE_X;
 float translationY = -1.0f / MODEL_SIZE_Y;
 float translationZ = -1.0f / MODEL_SIZE_Z;
   
+// initializes lattice array
 int64_t ***initLattice() {
   int i, j, k;
   int64_t ***ptr;
@@ -26,6 +28,7 @@ int64_t ***initLattice() {
   return ptr;
 }
 
+// draws cells
 void drawCells(float xrot, float yrot, int64_t ***lattice, cell_info_t *cells) {
   int i, j, x, y, z, sigma;
   for(i = 1; i <= numCells; i++) {
@@ -38,6 +41,8 @@ void drawCells(float xrot, float yrot, int64_t ***lattice, cell_info_t *cells) {
       glLoadIdentity();                       // Reset the model-view matrix
       glTranslatef((x - (MODEL_SIZE_X/2)) * translationX, (y - (MODEL_SIZE_Y/2)) * translationY, (z - (MODEL_SIZE_Z/2)) * translationZ); 
       glBegin(GL_QUADS);
+      
+        // set collor accoring to subcell type
         switch(cells[i].type){
           case MEDIUM:
             return;
